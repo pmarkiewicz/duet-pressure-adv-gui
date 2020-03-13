@@ -82,6 +82,7 @@ class FilamentConfig:
     cooling_fan_speed = 128
     extrusion_width = 0.42
     layer_height = 0.2
+    first_layer_height = 0.2
 
     def __init__(self, printer):
         self.extrusion_width = printer.nozzle_dia * self.EXTRUSION_WITH_MULT

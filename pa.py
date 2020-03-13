@@ -4,113 +4,146 @@ from math import *
 
 from configs import PrinterConfig, FilamentConfig, TestConfig
 
-def extrusion_volume_to_length(volume, filament_config):
-    return volume / (filament_config.filament_diameter ** 2 * pi * 0.25)    # 0.25 is to convert dia to radius   (R/2)^2
+class GCodeGen:
+    def __init__(self, printer_config, filament_config, test_config):
+        self.printer_config = printer_config
+        self.filament_config = filament_config
+        self.test_config = test_config
 
-def extrusion_for_length(length, filament_config):
-    return extrusion_volume_to_length(length * filament_config.extrusion_width * filament_config.layer_height, filament_config)
+        self.curr_x = printer_config.start_x + printer_config.object_width/2
+        self.curr_y = printer_config.start_y
+        self.curr_z = filament_config.first_layer_height
 
-def up(layer_height):
-    global curr_z
-    curr_z += layer_height
-    print(f"G1 Z{curr_z:.3f}")
+    def extrusion_volume_to_length(self, volume):
+        return volume / (self.filament_config.filament_diameter ** 2 * pi * 0.25)    # 0.25 is to convert dia to radius   (R/2)^2
 
-def line(x, y, speed, filament_config):
-    assert speed > 0, 'speed cannot be 0'
+    def extrusion_for_length(self, length):
+        return self.extrusion_volume_to_length(length * self.filament_config.extrusion_width * self.filament_config.layer_height)
 
-    length = sqrt(x**2 + y**2)
-    global curr_x, curr_y
-    curr_x += x
-    curr_y += y
-    extrusion = extrusion_for_length(length, filament_config)
-    print(f"G1 X{curr_x:.3f} Y{curr_y:.3f} E{extrusion:.4f} F{speed * 60:.0f}")
+    def up(self):
+        self.curr_z += self.filament_config.layer_height
+        print(f"G1 Z{self.curr_z:.3f}")
+
+    def line(self, x, y, speed):
+        assert speed > 0, 'speed cannot be 0'
+
+        length = sqrt(x**2 + y**2)
+        self.curr_x += x
+        self.curr_y += y
+        extrusion = self.extrusion_for_length(length)
+        print(f"G1 X{self.curr_x:.3f} Y{self.curr_y:.3f} E{extrusion:.4f} F{speed * 60:.0f}")
+
+    def move(self, x, y):
+        self.curr_x += x
+        self.curr_y += y
+        print(f"G1 X{self.curr_x:.3f} Y{self.curr_y:.3f} F{self.filament_config.travel_speed_in_min:.0f}")
+
+    def goto(self, x, y):
+        self.curr_x = x 
+        self.curr_y = y
+
+        print(f"G1 X{self.curr_x:.3f} Y{self.curr_y:.3f}")
+
+    def goto_z(self):
+        print("G1 X%.3f Y%.3f Z%.3f E1.0 F%.0f" % (self.curr_x, self.curr_y, self.curr_z, self.filament_config.travel_speed_in_min))
+
+    def start_fan(self):
+        print(f'\nM106 S{self.filament_config.cooling_fan_speed}')
+
+
+class TestPrinter(GCodeGen):
+    def __init__(self, printer_config, filament_config, test_config):
+        super().__init__(printer_config, filament_config, test_config)
+
+
+    def print_start_gcode(self):
+        print(self.printer_config.start_gcode.format(filament=self.test_config))
+
         
+    def print_end_gcode(self):
+        print(self.printer_config.end_gcode.format(filament=self.test_config))
 
-def move(x, y, filament_config):
-    global curr_x, curr_y
-    curr_x += x
-    curr_y += y
-    print(f"G1 X{curr_x:.3f} Y{curr_y:.3f} F{filament_config.travel_speed_in_min:.0f}")
-
-
-def goto(x, y, printer_config):
-    global curr_x, curr_y
-    curr_x = x #+ printer_config.offset_x
-    curr_y = y #+ printer_config.offset_y
-
-    print(f"G1 X{curr_x:.3f} Y{curr_y:.3f}")
-
-def first_layer_raft(printer_config, filament_config):
-
-    print('; raft layer')
-
-    move(-printer_config.object_width / 2, 0, filament_config)
-
-    for l in range(2):
         
-        for offset_i in range(5):
-            offset = offset_i * filament_config.extrusion_width
+    def first_layer_raft(self):
+        speed = self.filament_config.first_layer_speed
+        object_width = self.printer_config.object_width
+        extrusion_width = self.filament_config.extrusion_width
 
-            line(printer_config.object_width + offset, 0, filament_config.first_layer_speed, filament_config)
-            line(0, filament_config.extrusion_width + offset * 2, filament_config.first_layer_speed, filament_config)
-            line(-printer_config.object_width - offset * 2, 0, filament_config.first_layer_speed, filament_config)
-            line(0, -filament_config.extrusion_width - offset*2, filament_config.first_layer_speed, filament_config)
-            line(offset, 0, filament_config.first_layer_speed, filament_config)
+        print('; raft layer')
+
+        self.move(-self.printer_config.object_width / 2, 0)
+
+        for l in range(2):
             
-            move(0,-filament_config.extrusion_width, filament_config)
+            for offset_i in range(5):
+                offset = offset_i * self.filament_config.extrusion_width
 
-        up(filament_config.layer_height)
-        goto(printer_config.start_x, printer_config.start_y, printer_config)
+                self.line(object_width + offset, 0, speed)
+                self.line(0, extrusion_width + offset * 2, speed)
+                self.line(-object_width - offset * 2, 0, speed)
+                self.line(0, -extrusion_width - offset*2, speed)
+                self.line(offset, 0, speed)
 
-    print('; raft layer end')
+                self.move(0,-extrusion_width)
 
-printer_config = PrinterConfig()
-filament_config = FilamentConfig(printer_config)
-test_config = TestConfig()
+            self.up()
+            self.goto(self.printer_config.start_x, self.printer_config.start_y)
 
+        print('; raft layer end')
 
-layer0_z = filament_config.layer_height
+    def print_segment(self, dir, space):
+        self.line(dir * space / 2, 0, self.filament_config.fast_speed)
+        self.line(dir * self.test_config.pattern_width, 0, self.filament_config.slow_speed)
+        self.line(dir * space / 2, 0, self.filament_config.fast_speed)
 
-print(printer_config.start_gcode.format(filament=test_config))
+    def print_layer(self, space):
+        for i in range(self.test_config.num_patterns):
+            self.print_segment(1.0, space)
 
-curr_x = printer_config.start_x + printer_config.object_width/2
-curr_y = printer_config.start_y
-curr_z = layer0_z
+        self.line(0, self.filament_config.extrusion_width, self.filament_config.fast_speed)
 
-# goto z height
-print("G1 X%.3f Y%.3f Z%.3f E1.0 F%.0f" % (curr_x, curr_y, curr_z, filament_config.travel_speed * 60))
+        for i in range(self.test_config.num_patterns):
+            self.print_segment(-1.0, space)
         
-first_layer_raft(printer_config, filament_config)
+        self.line(0, -self.filament_config.extrusion_width, self.filament_config.fast_speed)
 
-print(f'\nM106 S{filament_config.cooling_fan_speed}\n')
 
-segment = (printer_config.object_width * 1.0) / test_config.num_patterns
-space = segment - test_config.pattern_width
+    def print_test(self):
+        segment = (self.printer_config.object_width * 1.0) / self.test_config.num_patterns
+        space = segment - self.test_config.pattern_width
 
-for l in range(test_config.layers):
-    
-    pressure_advance = (l / (test_config.layers * 1.0)) * (test_config.pressure_advance_max - test_config.pressure_advance_min) + test_config.pressure_advance_min
-    
-    print("; layer %d, pressure advance: %.3f" %(l, pressure_advance))
+        for l in range(self.test_config.layers):
+            
+            pressure_advance = (l / (self.test_config.layers * 1.0)) * \
+                (self.test_config.pressure_advance_max - self.test_config.pressure_advance_min) + \
+                self.test_config.pressure_advance_min
+            
+            print("; layer %d, pressure advance: %.3f" %(l, pressure_advance))
 
-    if test_config.show_messages:
-        print(f"M117 layer {l}, pressure advance: {pressure_advance:.3f}")
-    
-    print(f"M572 D0 S{pressure_advance:.3f}")
-    
-    for i in range(test_config.num_patterns):
-        line(space/2, 0, filament_config.fast_speed, filament_config)
-        line(test_config.pattern_width, 0, filament_config.slow_speed, filament_config)
-        line(space / 2, 0, filament_config.fast_speed, filament_config)
-    
-    line(0, filament_config.extrusion_width, filament_config.fast_speed, filament_config)
+            if self.test_config.show_messages:
+                print(f"M117 layer {l}, pressure advance: {pressure_advance:.3f}")
+            
+            print(f"M572 D0 S{pressure_advance:.3f}")
+            
+            self.print_layer(space)
 
-    for i in range(test_config.num_patterns):
-        line(-space / 2, 0, filament_config.fast_speed, filament_config)
-        line(-test_config.pattern_width, 0, filament_config.slow_speed, filament_config)
-        line(-space/2, 0, filament_config.fast_speed, filament_config)
-    
-    line(0, -filament_config.extrusion_width, filament_config.fast_speed, filament_config)
-    up(filament_config.layer_height)
+            self.up()
 
-print(printer_config.end_gcode)
+
+def generate_pa_test(printer_config, filament_config, test_config):
+    printer = TestPrinter(printer_config, filament_config, test_config)
+
+    printer.print_start_gcode()
+    printer.goto_z()
+    printer.first_layer_raft()
+    printer.start_fan()
+    printer.print_test()
+    printer.print_end_gcode()
+
+
+if __name__ == '__main__':
+    printer_config = PrinterConfig()
+    filament_config = FilamentConfig(printer_config)
+    test_config = TestConfig()
+
+    generate_pa_test(printer_config, filament_config, test_config)
