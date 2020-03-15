@@ -1,8 +1,12 @@
 #!/usr/local/bin/python
 
 from math import *
+import os
+from pathlib import Path
 
-from configs import PrinterConfig, FilamentConfig, TestConfig
+from configs import Config
+
+CONFIG_FILE = 'duet_pressure_advance.cfg'
 
 class GCodeGen:
     def __init__(self, printer_config, filament_config, test_config):
@@ -51,7 +55,7 @@ class GCodeGen:
 
         print(f"G1 X{self.curr_x:.3f} Y{self.curr_y:.3f}")
 
-    def goto_z(self):
+    def goto_current_coords(self):
         print("G1 X%.3f Y%.3f Z%.3f E1.0 F%.0f" % (self.curr_x, self.curr_y, self.curr_z, self.filament_config.travel_speed_in_min))
 
     def start_fan(self):
@@ -80,7 +84,7 @@ class TestPrinter(GCodeGen):
 
         self.move(-self.printer_config.object_width / 2, 0)
 
-        for l in range(2):
+        for _ in range(2):
             
             for offset_i in range(5):
                 offset = offset_i * self.filament_config.extrusion_width
@@ -115,7 +119,7 @@ class TestPrinter(GCodeGen):
             self.line_rel(-self.printer_config.object_width - (loop + 1) * self.filament_config.extrusion_width, 
                           0, 
                           self.filament_config.first_layer_speed)
-                          
+
         print('G90; absolute')
 
 
@@ -125,12 +129,12 @@ class TestPrinter(GCodeGen):
         self.line(dir * space / 2, 0, self.filament_config.fast_speed)
 
     def print_layer(self, space):
-        for i in range(self.test_config.num_patterns):
+        for _ in range(self.test_config.num_patterns):
             self.print_segment(1.0, space)
 
         self.line(0, self.filament_config.extrusion_width, self.filament_config.fast_speed)
 
-        for i in range(self.test_config.num_patterns):
+        for _ in range(self.test_config.num_patterns):
             self.print_segment(-1.0, space)
         
         self.line(0, -self.filament_config.extrusion_width, self.filament_config.fast_speed)
@@ -163,7 +167,7 @@ def generate_pa_test(printer_config, filament_config, test_config):
 
 
     printer.print_start_gcode()
-    printer.goto_z()
+    printer.goto_current_coords()
     printer.raft_loops()
     #printer.first_layer_raft()
     printer.start_fan()
@@ -172,6 +176,9 @@ def generate_pa_test(printer_config, filament_config, test_config):
 
 
 if __name__ == '__main__':
+    cfg_file = os.path.join(Path.home(), CONFIG_FILE)
+    configurator = Configurator(cfg_file)
+
     printer_config = PrinterConfig()
     filament_config = FilamentConfig(printer_config)
     test_config = TestConfig()
