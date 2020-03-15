@@ -61,15 +61,17 @@ M81 S1 ; turn off
         self.end_gcode = self.END_GCODE
 
 
-    def load(self, fn):
-        with open(fn) as f:
-            data = json.load(f)
-            print(data)
+    def load_printer(self, data):
+        self.name = data['name']
+        self.nozzle_dia = data['nozzle_dia']
+        self.start_x = data['start_x']
+        self.start_y = data['start_y']
+        self.object_width = data['object_width']
+        self.start_gcode = data['start_gcode']
+        self.end_gcode = data['end_gcode']
 
-    def save(self, fn):
-        d = self.__dict__
-        with open(fn, 'w') as f:
-            json.dump(self.__dict__, f)
+    def get_printer(self):
+        return self.__dict__
 
 
 class FilamentConfig:
@@ -91,7 +93,25 @@ class FilamentConfig:
         self.first_layer_height = 0.2
         self.extruder_temperature = 275
         self.bed_temperature = 115
+        self.raft_loops = 3
         self.name = 'PC'
+
+    def load_filament(self, data):
+        self.extrusion_width = data['extrusion_width']
+        self.layer_height = data['layer_height']
+        self.filament_diameter = data['filament_diameter']
+        self.travel_speed = data['travel_speed']
+        self.first_layer_speed = data['first_layer_speed']
+        self.slow_speed  = data['slow_speed']
+        self.fast_speed  = data['fast_speed']
+        self.cooling_fan_speed = data['cooling_fan_speed']
+        self.first_layer_height = data['first_layer_height']
+        self.extruder_temperature = data['extruder_temperature']
+        self.bed_temperature = data['bed_temperature']
+        self.name = data['name']
+
+    def get_filament(self):
+        return self.__dict__
 
     def _travel_speed_in_min(self):
         return self.travel_speed * 60
@@ -99,14 +119,48 @@ class FilamentConfig:
     travel_speed_in_min = property(_travel_speed_in_min)
     
 
-
 class TestConfig:
-    layers        = 10
-    num_patterns  =  4	# how many speed changes
-    pattern_width =  5	# slow speed length
-    pressure_advance_min = 0.5
-    pressure_advance_max = 3.0
-    show_messages = False
+    def __init__(self):
+        self.layers        = 10
+        self.num_patterns  =  4	# how many speed changes
+        self.pattern_width =  5	# slow speed length
+        self.pressure_advance_min = 0.5
+        self.pressure_advance_max = 3.0
+        self.show_messages = False
 
-p = PrinterConfig()
-p.save('c:/temp/test1.json')
+    def load_test(self, data):
+        self.layers = data['layers']
+        self.num_patterns =  data['num_patterns']
+        self.pattern_width = data['pattern_width']
+        self.pressure_advance_min = data['pressure_advance_min']
+        self.pressure_advance_max = data['pressure_advance_max']
+        self.show_messages = data['show_messages']
+
+    def get_test(self):
+        return self.__dict__
+
+class Configurator(PrinterConfig, FilamentConfig, TestConfig):
+    def __init__(self, filename=None):
+        PrinterConfig.__init__(self)
+        FilamentConfig.__init__(self, self)
+        TestConfig.__init__(self)
+
+        if filename:
+            self.load(filename)
+
+    def load(self, filename):
+        try:
+            with open(filename, 'r') as f:
+                data = json.load(f)
+                self.load_printer(data)
+                self.load_filament(data)
+                self.load_test(data)
+        except Exception as ex:
+            print(ex)
+
+    def save(self, filename):
+        try:
+            with open(filename, 'w') as f:
+                json.dump(self.__dict__, f, indent=4)
+        except Exception as ex:
+            print(ex)
