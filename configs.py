@@ -6,15 +6,17 @@ class PrinterConfig:
     '''
     START_GCODE = '''
 ; Pressure advance test
-; min pressure adv: {filament.pressure_advance_min}
-; max pressure adv: {filament.pressure_advance_max}
+; min pressure adv: {test.pressure_advance_min}
+; max pressure adv: {test.pressure_advance_max}
+; filament name: {filament.name}
+; 
 G90
 M82
 M106 S0
-M140 S70
-M104 S238 T0
-M190 S70
-M109 S238 T0
+M140 S{filament.bed_temperature}
+M104 S{filament.extruder_temperature} T0
+M190 S{filament.bed_temperature}
+M109 S{filament.extruder_temperature} T0
 G28 ; home all axes
 T0 ; set active extruder to 0
 ;M913 Y50 ; lower Y stepper torque to 50% ;if stall detection fails for protection of mechanics
@@ -38,12 +40,15 @@ M83 ; relative extrusion
     END_GCODE = '''
 ; END.gcode
 G91 ; relative
+G1 E-10 F100 ; retract
 G1 Z10 F450 ; bed clearance
 G90 ; absolute
 M106 S0 ; turn off part cooling fan
 M104 S0 ; turn off extruder
 M140 S0 ; turn off bed
 M84 ; disable motors    
+M81 S1 ; turn off
+
     '''
 
     def __init__(self):
@@ -74,19 +79,19 @@ class FilamentConfig:
     EXTRUSION_WITH_MULT = 1.2
     LAYER_HIGHT_MULT = 0.5
 
-    filament_diameter = 1.75
-    travel_speed      = 200
-    first_layer_speed =  25
-    slow_speed        =  15 # speed for the slow segments
-    fast_speed        =  80 # speed for the fast segments
-    cooling_fan_speed = 128
-    extrusion_width = 0.42
-    layer_height = 0.2
-    first_layer_height = 0.2
-
     def __init__(self, printer):
         self.extrusion_width = printer.nozzle_dia * self.EXTRUSION_WITH_MULT
         self.layer_height = printer.nozzle_dia * self.LAYER_HIGHT_MULT
+        self.filament_diameter = 1.75
+        self.travel_speed      = 200
+        self.first_layer_speed =  25
+        self.slow_speed        =  15 # speed for the slow segments
+        self.fast_speed        =  80 # speed for the fast segments
+        self.cooling_fan_speed = 128
+        self.first_layer_height = 0.2
+        self.extruder_temperature = 275
+        self.bed_temperature = 115
+        self.name = 'PC'
 
     def _travel_speed_in_min(self):
         return self.travel_speed * 60

@@ -68,7 +68,7 @@ class TestPrinter(GCodeGen):
 
 
     def print_start_gcode(self):
-        print(self.printer_config.start_gcode.format(filament=self.test_config))
+        print(self.printer_config.start_gcode.format(test=self.test_config, filament=self.filament_config))
 
         
     def print_end_gcode(self):
