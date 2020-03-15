@@ -33,6 +33,13 @@ class GCodeGen:
         extrusion = self.extrusion_for_length(length)
         print(f"G1 X{self.curr_x:.3f} Y{self.curr_y:.3f} E{extrusion:.4f} F{speed * 60:.0f}")
 
+    def line_rel(self, x, y, speed):
+        assert speed > 0, 'speed cannot be 0'
+
+        length = sqrt(x**2 + y**2)
+        extrusion = self.extrusion_for_length(length)
+        print(f"G1 X{x:.3f} Y{y:.3f} E{extrusion:.4f} F{speed * 60:.0f}")
+
     def move(self, x, y):
         self.curr_x += x
         self.curr_y += y
@@ -91,6 +98,27 @@ class TestPrinter(GCodeGen):
 
         print('; raft layer end')
 
+    def raft_loops(self):
+        self.goto(self.printer_config.start_x, self.printer_config.start_y)
+        print('G91; relative')
+
+        for loop in range(0, self.filament_config.raft_loops * 2, 2):
+            self.line_rel(0, 
+                          loop * self.filament_config.extrusion_width, 
+                          self.filament_config.first_layer_speed)
+            self.line_rel(self.printer_config.object_width + loop * self.filament_config.extrusion_width, 
+                          0, 
+                          self.filament_config.first_layer_speed)
+            self.line_rel(0, 
+                          (loop + 1) * -self.filament_config.extrusion_width, 
+                          self.filament_config.first_layer_speed)
+            self.line_rel(-self.printer_config.object_width - (loop + 1) * self.filament_config.extrusion_width, 
+                          0, 
+                          self.filament_config.first_layer_speed)
+                          
+        print('G90; absolute')
+
+
     def print_segment(self, dir, space):
         self.line(dir * space / 2, 0, self.filament_config.fast_speed)
         self.line(dir * self.test_config.pattern_width, 0, self.filament_config.slow_speed)
@@ -133,9 +161,11 @@ class TestPrinter(GCodeGen):
 def generate_pa_test(printer_config, filament_config, test_config):
     printer = TestPrinter(printer_config, filament_config, test_config)
 
+
     printer.print_start_gcode()
     printer.goto_z()
-    printer.first_layer_raft()
+    printer.raft_loops()
+    #printer.first_layer_raft()
     printer.start_fan()
     printer.print_test()
     printer.print_end_gcode()
