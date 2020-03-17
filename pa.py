@@ -34,7 +34,7 @@ class GCodeGen:
     def goto_xyz(self, x: float, y: float, z: float) -> str:
         return f"G1 X{x:.3f} Y{y:.3f} Y{z:.3f} F{self.cfg.travel_speed_in_min:.0f}"
 
-    def start_fan(self):
+    def fan_on(self):
         return f'M106 S{self.cfg.cooling_fan_speed} ; start fan'
 
     def relative_moves(self):
@@ -135,6 +135,8 @@ class TestPrinter(GCodeGen):
 
         return result
 
+    def start_fan(self):
+        return [self.fan_on()]
 
     def goto_start(self):
         return [self.goto(self.cfg.start_x, self.cfg.start_y)]
@@ -142,14 +144,13 @@ class TestPrinter(GCodeGen):
 def generate_pa_test(cfg):
     printer = TestPrinter(cfg)
 
-    gcode = []
-    gcode += printer.start_gcode()
-    gcode += printer.goto_start()
-    gcode += printer.raft_loops()
-    gcode.append(printer.start_fan())
-    gcode += printer.goto_start()
-    gcode += printer.get_test()
-    gcode += printer.end_gcode()
+    gcode = (printer.start_gcode()
+             + printer.goto_start()
+             + printer.raft_loops()
+             + printer.start_fan()
+             + printer.goto_start()
+             + printer.get_test()
+             + printer.end_gcode())
 
     return gcode
 
