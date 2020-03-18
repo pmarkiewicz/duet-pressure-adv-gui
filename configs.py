@@ -52,6 +52,8 @@ M81 S1 ; turn off
     '''
 
     def __init__(self):
+        self.ip_addr = None
+        self.pwd = None
         self.name = 'default printer'
         self.nozzle_dia = 0.4
         self.start_x = 50
