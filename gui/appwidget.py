@@ -63,29 +63,9 @@ class App(QWidget):
         self.show()
     
     def generateFile(self):
-        ready = (self.telescope.filename and self.ti.filename and self.vacation.filename and self.mp.filename and
-                        self.result.filename and self.params.leavers_from_year)
+        self.filamentwidget.updateConfig(self.configurator)
+        self.printerwidget.updateConfig(self.configurator)
+        self.testwidget.updateConfig(self.configurator)
+        self.endcodewidget.updateConfig(self.configurator)
+        
 
-        if not ready:
-            msg = QMessageBox(self)
-            msg.setText('Some files are missing')
-            msg.setStandardButtons(QMessageBox.Ok)
-            msg.setIcon(QMessageBox.Critical)
-            msg.setWindowTitle("Error")
-            msg.exec_()
-            return
-
-        leavers_from_year = self.params.leavers_from_year
-
-        self.setEnabled(False)
-        self.process_func(self.telescope.filename, self.ti.filename, self.vacation.filename, self.mp.filename,
-                            self.result.filename, self.params.leavers_from_year)
-
-        msg = QMessageBox(self)
-        msg.setText('File generated')
-        msg.setStandardButtons(QMessageBox.Ok)
-        msg.setIcon(QMessageBox.Information)
-        msg.setWindowTitle("Done")
-        msg.exec_()
-
-        self.setEnabled(True)

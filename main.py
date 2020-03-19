@@ -12,6 +12,9 @@ from pa import generate_pa_test
 
 CONFIG_FILE = 'duet_pressure_advance.cfg'
 
+def generate(cfg):
+    pass
+
 if __name__ == '__main__':
     cfg_file = os.path.join(Path.home(), CONFIG_FILE)
     configurator = Configurator(cfg_file)

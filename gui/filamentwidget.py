@@ -110,3 +110,18 @@ class FilamentWidget(QGroupBox):
         widget.setValue(value)
 
         return widget
+
+    def updateConfig(self, cfg):
+        cfg.extrusion_width = self.extrusion_width.value()
+        cfg.layer_height = self.layer_height.value()
+        cfg.filament_diameter = self.filament_diameter.value()
+        cfg.travel_speed = self.travel_speed.value()
+        cfg.first_layer_speed = self.first_layer_speed.value()
+        cfg.slow_speed = self.slow_speed.value()
+        cfg.fast_speed = self.fast_speed.value()
+        cfg.cooling_fan_speed = self.cooling_fan_speed.value()
+        cfg.first_layer_height = self.first_layer_height.value()
+        cfg.extruder_temperature = self.extruder_temperature.value()
+        cfg.bed_temperature = self.bed_temperature.value()
+        cfg.raft_loops = self.raft_loops.value()
+        
