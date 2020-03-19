@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import (QApplication, QWidget, QLineEdit, QFileDialog, QPushButton, 
-                            QVBoxLayout, QGroupBox, QGridLayout, QMessageBox, QLabel, QTabWidget, QButtonGroup)
+                            QVBoxLayout, QGroupBox, QGridLayout, QMessageBox, QLabel, 
+                            QTabWidget, QButtonGroup, QFileDialog)
 
 from .filewidget import FileOpenWidget, FileSaveWidget
 
@@ -14,7 +15,7 @@ class App(QWidget):
         super().__init__()
         self.process_func = process_func
 
-        self.configurator = configurator
+        self.configuration = configurator
         self.title = 'Pressure adv test'
         self.left = 50
         self.top = 50
@@ -29,11 +30,11 @@ class App(QWidget):
         layout = QVBoxLayout()
         layout.setSpacing(5)
 
-        self.filamentwidget = FilamentWidget("F", self.configurator, self)
-        self.printerwidget = PrinterWidget('P', self.configurator, self)
-        self.testwidget = TestWidget('T', self.configurator, self)
-        self.startcodewidget = GCodeWidget('GS', self.configurator.start_gcode, self)
-        self.endcodewidget = GCodeWidget('GE', self.configurator.end_gcode, self)
+        self.filamentwidget = FilamentWidget("F", self.configuration, self)
+        self.printerwidget = PrinterWidget('P', self.configuration, self)
+        self.testwidget = TestWidget('T', self.configuration, self)
+        self.startcodewidget = GCodeWidget('GS', self.configuration.start_gcode, self)
+        self.endcodewidget = GCodeWidget('GE', self.configuration.end_gcode, self)
         tabs = QTabWidget()
         tabs.addTab(self.testwidget, 'Test Cfg')
         tabs.addTab(self.filamentwidget, 'Filament Cfg')
@@ -50,11 +51,11 @@ class App(QWidget):
         buttons.setLayout(bgrid)
 
         generate = QPushButton('Generate')
-        generate.clicked.connect(self.generateFile)
+        generate.clicked.connect(self.createFile)
         bgrid.addWidget(generate, 1, 0)
 
         send = QPushButton('Send')
-        send.clicked.connect(self.generateFile)
+        send.clicked.connect(self.updateConfiguration)
         bgrid.addWidget(send, 1, 1)
 
         layout.addWidget(buttons)
@@ -62,10 +63,25 @@ class App(QWidget):
 
         self.show()
     
-    def generateFile(self):
-        self.filamentwidget.updateConfig(self.configurator)
-        self.printerwidget.updateConfig(self.configurator)
-        self.testwidget.updateConfig(self.configurator)
-        self.endcodewidget.updateConfig(self.configurator)
+    def updateConfiguration(self):
+        self.filamentwidget.updateConfig(self.configuration)
+        self.printerwidget.updateConfig(self.configuration)
+        self.testwidget.updateConfig(self.configuration)
+        self.startcodewidget.updateConfig(self.configuration, 'start_gcode')
+        self.endcodewidget.updateConfig(self.configuration, 'end_gcode')
+
+    def openFileSaveDialog(self):
+        options = QFileDialog.Options()
+        filter = "Excel Files (*.gcode);;All Files (*)"
+        fileName, _ = QFileDialog.getSaveFileName(self,"QFileDialog.getSaveFileName()", "", filter, options=options)
         
+        return fileName
+
+    def createFile(self):
+        self.updateConfiguration()
+        fileName = self.openFileSaveDialog()
+        gcode = self.process_func(self.configuration)
+        s = '\n'.join(gcode)
+        with open(fileName, 'w') as f:
+            f.write(s)
 

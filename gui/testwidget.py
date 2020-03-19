@@ -80,4 +80,4 @@ class TestWidget(QGroupBox):
         cfg.pattern_width = self.pattern_width.value()
         cfg.pressure_advance_min = self.pressure_advance_min.value()
         cfg.pressure_advance_max = self.pressure_advance_max.value()
-        cfg.show_messages = self.show_messages.value()
+        cfg.show_messages = self.show_messages.checkState()

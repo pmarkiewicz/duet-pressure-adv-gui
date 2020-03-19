@@ -60,8 +60,8 @@ class PrinterWidget(QGroupBox):
         return widget
 
     def updateConfig(self, cfg):
-        cfg.ip_addr = self.ip_addr.value()
-        cfg.pwd = self.pwd.value()
+        cfg.ip_addr = self.ip_addr.text()
+        cfg.pwd = self.pwd.text()
         cfg.nozzle_dia = self.nozzle_dia.value()
         cfg.start_x = self.start_x.value()
         cfg.start_y = self.start_y.value()

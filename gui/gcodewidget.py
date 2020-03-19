@@ -20,3 +20,6 @@ class GCodeWidget(QGroupBox):
         grid.addWidget(self.text)
 
         self.setLayout(grid)
+
+    def updateConfig(self, cfg, fieldname):
+        setattr(cfg, fieldname, self.text.toPlainText())
